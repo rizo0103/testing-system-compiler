@@ -1,5 +1,6 @@
 from datetime import datetime
 import subprocess
+import json
 import os
 
 def run_code(code, extension, stdInput, stdOutput):
@@ -31,6 +32,7 @@ def run_code(code, extension, stdInput, stdOutput):
     # process = subprocess.Popen(['python', f'{file_name}.{extension}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate(input = stdInput.encode())
     output = output.decode('utf-8').strip()
+    error = error.decode('utf-8').strip()
 
     # Delete the temporary files
 
@@ -38,4 +40,4 @@ def run_code(code, extension, stdInput, stdOutput):
     if extension == 'java' or extension == 'cpp':
         os.remove(f'{file_name}.exe')
 
-    return [output == stdOutput, output, stdOutput]
+    return {"result": output == stdOutput, "error": error}
