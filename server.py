@@ -17,13 +17,8 @@ def hello():
 def run_code():
     try:
         data = request.json
-        
-        code = data['code']
-        stdInput = data['input']
-        stdOutput = data['output']
-        extension = data['ext']
 
-        output = temp.run_code(data['code'], extension, stdInput, stdOutput)
+        output = temp.run_code(data['code'], data['extension'], data['stdInput'], data['stdOutput'])
 
         return jsonify({'message': 'Success!', 'data': data, 'stdout': f'{output}'})
     except Exception as e:
