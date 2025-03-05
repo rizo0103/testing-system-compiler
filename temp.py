@@ -4,7 +4,7 @@ import json
 import os
 
 def run_code(code, extension, stdInput, stdOutput):
-    file_name = f'{datetime.today().strftime('%Y%m%dT%H%M%S%fZ')}'
+    file_name = f'{datetime.today().strftime("%Y%m%dT%H%M%S%fZ")}'
     # file_name = 'test'
 
     # Save the code to a temporary file
