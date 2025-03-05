@@ -21,8 +21,9 @@ def run_code():
         code = data['code']
         stdInput = data['input']
         stdOutput = data['output']
+        extension = data['ext']
 
-        output = temp.run_code(data['code'], 'cpp', stdInput, stdOutput)
+        output = temp.run_code(data['code'], extension, stdInput, stdOutput)
 
         return jsonify({'message': 'Success!', 'data': data, 'stdout': f'{output}'})
     except Exception as e:
