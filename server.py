@@ -1,10 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import temp
-import subprocess
-import tempfile
-import json
-import os
 
 app = Flask(__name__)
 CORS(app)  # Разрешаем все источники
@@ -17,10 +13,9 @@ def hello():
 def run_code():
     try:
         data = request.json
+        output = temp.run_code(data['code'], data['ext'], data['input'], data['output'], int(data['timeLimit']), int(data['memoryLimit']))
 
-        output = temp.run_code(data['code'], data['extension'], data['stdInput'], data['stdOutput'])
-
-        return jsonify({'message': 'Success!', 'data': data, 'stdout': f'{output}'})
+        return jsonify({'message': 'Success!', 'data': data, 'output': output})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

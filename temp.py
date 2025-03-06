@@ -1,9 +1,10 @@
 from datetime import datetime
+import tracemalloc
 import subprocess
-import json
+import time
 import os
 
-def run_code(code, extension, stdInput, stdOutput):
+def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit):
     file_name = f'{datetime.today().strftime("%Y%m%dT%H%M%S%fZ")}'
     # file_name = 'test'
 
@@ -13,7 +14,11 @@ def run_code(code, extension, stdInput, stdOutput):
     
     # Execute the code with the given input
     process = 0
-    
+
+    # Get the start time of code compilation and start monitoring memory usage
+    start_time = time.time()
+    tracemalloc.start()
+
     match extension:
         case 'py':
             process = subprocess.Popen(['python', f'{file_name}.{extension}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -33,6 +38,20 @@ def run_code(code, extension, stdInput, stdOutput):
     output, error = process.communicate(input = stdInput.encode())
     output = output.decode('utf-8').strip()
     error = error.decode('utf-8').strip()
+    process.wait()
+
+    # Get the end time of the code compilation
+    end_time = time.time()
+
+    # Calculate the time taken to compile the code and get the memory usage
+    compile_time = end_time - start_time
+    memory_usage = tracemalloc.get_traced_memory()
+
+    # Convert memory usage to megabytes
+    memory_usage = memory_usage[1] / (1024 * 1024)
+
+    # Stop monitoring memory usage
+    tracemalloc.stop()
 
     # Delete the temporary files
 
@@ -40,4 +59,27 @@ def run_code(code, extension, stdInput, stdOutput):
     if extension == 'java' or extension == 'cpp':
         os.remove(f'{file_name}.exe')
 
-    return {"result": output == stdOutput, "error": error}
+    status = "Passed"
+    error = "No errors"
+
+    if timeLimit < compile_time:
+        status = "Failed"
+        error = "Time limit exceeded"
+    
+    if memoryLimit < memory_usage:
+        status = "Failed"
+        error = "Memory limit exceeded"
+    
+    if stdOutput != output:
+        status = "Failed"
+        error = "Wrong output"
+
+    return {
+        "status": status,
+        "error": error,
+        "output": output,
+        "expectedOutput": stdOutput,
+        "input": stdInput,
+        "compileTime": round(compile_time, 5),  # in seconds
+        "memoryUsage": round(memory_usage, 5), # in megabytes
+    }
