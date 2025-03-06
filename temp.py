@@ -15,8 +15,7 @@ def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit):
     # Execute the code with the given input
     process = 0
 
-    # Get the start time of code compilation and start monitoring memory usage
-    start_time = time.time()
+    # Start monitoring memory usage
     tracemalloc.start()
 
     match extension:
@@ -35,6 +34,10 @@ def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit):
         case _:
             return 'Unsupported file type'
     # process = subprocess.Popen(['python', f'{file_name}.{extension}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Get the start time of the compilation
+    start_time = time.time()
+    
     output, error = process.communicate(input = stdInput.encode())
     output = output.decode('utf-8').strip()
     error = error.decode('utf-8').strip()
