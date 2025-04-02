@@ -6,7 +6,6 @@ import os
 
 def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit):
     file_name = f'{datetime.today().strftime("%Y%m%dT%H%M%S%fZ")}'
-    # file_name = 'test'
 
     # Save the code to a temporary file
     with open(f'{file_name}.{extension}', 'w') as f:
@@ -14,6 +13,7 @@ def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit):
     
     # Execute the code with the given input
     process = 0
+    compile_success = True  # Flag to track successful compilation
 
     # Start monitoring memory usage
     tracemalloc.start()
@@ -25,15 +25,39 @@ def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit):
             process = subprocess.Popen(['node', f'{file_name}.{extension}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         case 'java':
             process = subprocess.Popen(['javac', f'{file_name}.{extension}'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            process.communicate()
-            process = subprocess.Popen(['java', f'{file_name}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            _, compile_error = process.communicate()
+            if process.returncode != 0:
+                compile_success = False
+                error_message = compile_error.decode('utf-8').strip()
+            else:
+                process = subprocess.Popen(['java', f'{file_name}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         case 'cpp':
             process = subprocess.Popen(['g++', f'{file_name}.{extension}', '-o', f'{file_name}.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            process.communicate()
-            process = subprocess.Popen([f'./{file_name}.exe'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            _, compile_error = process.communicate()
+            if process.returncode != 0:
+                compile_success = False
+                error_message = compile_error.decode('utf-8').strip()
+            else:
+                process = subprocess.Popen([f'./{file_name}.exe'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         case _:
-            return 'Unsupported file type'
-    # process = subprocess.Popen(['python', f'{file_name}.{extension}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            compile_success = False
+            error_message = 'Unsupported file type'
+
+    if not compile_success:
+        os.remove(f'{file_name}.{extension}')
+        if extension == 'java' or extension == 'cpp':
+            if os.path.exists(f'{file_name}.exe'):
+                os.remove(f'{file_name}.exe')
+
+        return {
+            "status": "Failed",
+            "error": error_message,
+            "output": "",
+            "expectedOutput": stdOutput,
+            "input": stdInput,
+            "compileTime": 0,
+            "memoryUsage": 0,
+        }
 
     # Get the start time of the compilation
     start_time = time.time()
@@ -57,10 +81,10 @@ def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit):
     tracemalloc.stop()
 
     # Delete the temporary files
-
     os.remove(f'{file_name}.{extension}')
     if extension == 'java' or extension == 'cpp':
-        os.remove(f'{file_name}.exe')
+        if os.path.exists(f'{file_name}.exe'):
+            os.remove(f'{file_name}.exe')
 
     status = "Passed"
     error = "No errors"
