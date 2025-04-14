@@ -13,7 +13,7 @@ def hello():
 def run_code():
     try:
         data = request.json
-        output = temp.run_code(data['code'], data['ext'], data['input'], data['output'], int(data['timeLimit']), int(data['memoryLimit']))
+        output = temp.run_code(data['code'], data['ext'], data['input'], data['output'], int(data['timeLimit']), int(data['memoryLimit']), int(data['precision']) if 'precision' in data else None)
 
         return jsonify({'message': 'Success!', 'data': data, 'output': output})
     except Exception as e:

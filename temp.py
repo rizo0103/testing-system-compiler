@@ -1,112 +1,20 @@
+from resources import functions
 from datetime import datetime
 import tracemalloc
 import subprocess
 import time
 import os
 
-def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit):
-    file_name = f'{datetime.today().strftime("%Y%m%dT%H%M%S%fZ")}'
-
-    # Save the code to a temporary file
-    with open(f'{file_name}.{extension}', 'w') as f:
-        f.write(code)
-    
-    # Execute the code with the given input
-    process = 0
-    compile_success = True  # Flag to track successful compilation
-
-    # Start monitoring memory usage
-    tracemalloc.start()
-
-    match extension:
-        case 'py':
-            process = subprocess.Popen(['python', f'{file_name}.{extension}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        case 'js':
-            process = subprocess.Popen(['node', f'{file_name}.{extension}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        case 'java':
-            process = subprocess.Popen(['javac', f'{file_name}.{extension}'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            _, compile_error = process.communicate()
-            if process.returncode != 0:
-                compile_success = False
-                error_message = compile_error.decode('utf-8').strip()
-            else:
-                process = subprocess.Popen(['java', f'{file_name}'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        case 'cpp':
-            process = subprocess.Popen(['g++', f'{file_name}.{extension}', '-o', f'{file_name}.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            _, compile_error = process.communicate()
-            if process.returncode != 0:
-                compile_success = False
-                error_message = compile_error.decode('utf-8').strip()
-            else:
-                process = subprocess.Popen([f'./{file_name}.exe'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        case _:
-            compile_success = False
-            error_message = 'Unsupported file type'
-
-    if not compile_success:
-        os.remove(f'{file_name}.{extension}')
-        if extension == 'java' or extension == 'cpp':
-            if os.path.exists(f'{file_name}.exe'):
-                os.remove(f'{file_name}.exe')
-
-        return {
-            "status": "Failed",
-            "error": error_message,
-            "output": "",
-            "expectedOutput": stdOutput,
-            "input": stdInput,
-            "compileTime": 0,
-            "memoryUsage": 0,
-        }
-
-    # Get the start time of the compilation
-    start_time = time.time()
-    
-    output, error = process.communicate(input = stdInput.encode())
-    output = output.decode('utf-8').strip()
-    error = error.decode('utf-8').strip()
-    process.wait()
-
-    # Get the end time of the code compilation
-    end_time = time.time()
-
-    # Calculate the time taken to compile the code and get the memory usage
-    compile_time = end_time - start_time
-    memory_usage = tracemalloc.get_traced_memory()
-
-    # Convert memory usage to megabytes
-    memory_usage = memory_usage[1] / (1024 * 1024)
-
-    # Stop monitoring memory usage
-    tracemalloc.stop()
-
-    # Delete the temporary files
-    os.remove(f'{file_name}.{extension}')
-    if extension == 'java' or extension == 'cpp':
-        if os.path.exists(f'{file_name}.exe'):
-            os.remove(f'{file_name}.exe')
-
-    status = "Passed"
-    error = "No errors"
-
-    if timeLimit < compile_time:
-        status = "Failed"
-        error = "Time limit exceeded"
-    
-    if memoryLimit < memory_usage:
-        status = "Failed"
-        error = "Memory limit exceeded"
-    
-    if stdOutput != output:
-        status = "Failed"
-        error = "Wrong output"
-
-    return {
-        "status": status,
-        "error": error,
-        "output": output,
-        "expectedOutput": stdOutput,
-        "input": stdInput,
-        "compileTime": round(compile_time, 5),  # in seconds
-        "memoryUsage": round(memory_usage, 5), # in megabytes
-    }
+def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit, precision=None):
+    compile_result = functions.compile_code(code, extension, stdInput)
+    print(functions.compare_results(stdOutput, compile_result["output"], precision))
+    return compile_result
+    # return {
+    #     "status": status,
+    #     "error": error,
+    #     "output": output,
+    #     "expectedOutput": stdOutput,
+    #     "input": stdInput,
+    #     "compileTime": round(compile_time, 5),  # in seconds
+    #     "memoryUsage": round(memory_usage, 5), # in megabytes
+    # }
