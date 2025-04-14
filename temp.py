@@ -7,7 +7,6 @@ import os
 
 def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit, precision=None):
     compile_result = functions.compile_code(code, extension, stdInput)
-    print(functions.compare_results(stdOutput, compile_result["output"], precision))
     return compile_result
     # return {
     #     "status": status,
@@ -18,3 +17,5 @@ def run_code(code, extension, stdInput, stdOutput, timeLimit, memoryLimit, preci
     #     "compileTime": round(compile_time, 5),  # in seconds
     #     "memoryUsage": round(memory_usage, 5), # in megabytes
     # }
+def compile_code(code, extension, input = None):
+    return functions.compile_code(code, extension, input)

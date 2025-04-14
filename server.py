@@ -18,6 +18,16 @@ def run_code():
         return jsonify({'message': 'Success!', 'data': data, 'output': output})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/compile', methods=['POST'])
+def compile_code():
+    try:
+        data = request.json
+        output = temp.compile_code(data['code'], data['ext'], data['input'])
+
+        return jsonify({'message': 'Success!', 'data': data, 'output': output})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
