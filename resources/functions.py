@@ -19,27 +19,27 @@ def compare_floats(num1, num2, precision=2):
     """
     return round(num1, precision) == round(num2, precision)
 
-def compile_code(code, extension, input = None):
+def compile_code(code, extension, additional_data = None):
     """
     Compile the given code and return the result.
     
     Args:
         code (str): The code to compile.
         extension (str): The extension of the code file.
-        input (str): Input cases (optional)
+        additional_data (object): Input Cases, Time Limit, Memory Limit (optional)
     
     Returns:
-        success (bool): The compilation status,
-        output (str): The output of the compilation process,
-        error (str): The error message if any,
-        compileTime (float): The time taken for compilation,
-        compileMemoryUsage (float): The memory usage during compilation.
+        success (bool): The compilation status.
+        output (str): The output of the compilation process.
+        error (str): The error message if any.
+        compileTime (float): The time taken for compilation.
+        memoryUsage (float): The memory usage during compilation
     """
     file_name_base = 'resources/' + datetime.today().strftime("%Y%m%dT%H%M%S%fZ")
     source_file = f'{file_name_base}.{extension}'
     executable_file = file_name_base + '.exe'
     compile_output = ""
-    compile_error = ""
+    compile_error = "No errors"
     compile_success = True
     compile_time = 0
     compile_memory_usage = 0
@@ -55,7 +55,7 @@ def compile_code(code, extension, input = None):
 
         match extension:
             case 'java':
-                if input:
+                if additional_data['input']:
                     process = subprocess.Popen(['java', source_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 else:
                     process = subprocess.Popen(['javac', source_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -67,9 +67,12 @@ def compile_code(code, extension, input = None):
                 if process.returncode != 0:
                     compile_success = False
                 else:
-                    process = subprocess.Popen([executable_file], stdin=subprocess.PIPE if input else None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    if additional_data['input']:
+                        process = subprocess.Popen([executable_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    else:
+                        process = subprocess.Popen([executable_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             case 'py':
-                if input:
+                if 'input' in additional_data:
                     process = subprocess.Popen(['python', source_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 else:
                     process = subprocess.Popen(['python', source_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)  
@@ -80,7 +83,7 @@ def compile_code(code, extension, input = None):
                 compile_error = 'Unsupported file type for compilation'
 
         start_time = time.time()
-        compile_output, compile_error = process.communicate(input = input.encode())
+        compile_output, compile_error = process.communicate(input = additional_data['input'].encode())
         # compile_output = process.stdin.write(input) if input else None
         compile_output = compile_output.decode('utf-8').strip()
         compile_error = compile_error.decode('utf-8').strip()
@@ -98,6 +101,22 @@ def compile_code(code, extension, input = None):
         # При ошибке компиляции удаляем и исполняемый файл, если он был создан
         # if os.path.exists(executable_file):
         #     os.remove(executable_file)
+
+    if "MemoryError" in compile_error:
+        compile_error = "MemoryError"
+        compile_success = False
+    
+    if "TimeoutError" in compile_error:
+        compile_error = "TimeoutError"
+        compile_success = False
+    
+    if additional_data['time_limit'] < compile_time:
+        compile_error = "TimeLimitExceeded"
+        compile_success = False
+    
+    if additional_data['memory_limit'] < compile_memory_usage:
+        compile_error = "MemoryLimitExceeded"
+        compile_success = False
 
     return {
         "status": "Passed" if compile_success else "Failed",
