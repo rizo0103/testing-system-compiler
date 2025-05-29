@@ -16,6 +16,7 @@ def run_code():
         data = request.json
         code = data['code']
         ext = data['ext']
+        validatorCode = data['outputValidatorCode'] if 'outputValidatorCode' in data else None
         output = data['output']
         additional_data = {
             "input": data['input'] if 'input' in data else None,
@@ -26,7 +27,7 @@ def run_code():
         # if compile_output['error'] != "No errors":
         #     return jsonify({'message': 'Compilation error', 'error': compile_output['error']}), 500
         
-        if functions.compare_results(expected_output = output, user_output = compile_output['output'], precision = data['precision'] if 'precision' in data else None):
+        if functions.compare_results(expected_output = output, user_output = compile_output['output'], precision = data['precision'] if 'precision' in data else None, validatorCode = validatorCode, input = additional_data['input'] if 'input' in additional_data else None):
             return compile_output, 200
         else:
             compile_output['status'] = "Failed"

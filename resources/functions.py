@@ -84,23 +84,18 @@ def compile_code(code, extension, additional_data = None):
 
         start_time = time.time()
         compile_output, compile_error = process.communicate(input = additional_data['input'].encode())
-        # compile_output = process.stdin.write(input) if input else None
         compile_output = compile_output.decode('utf-8').strip()
         compile_error = compile_error.decode('utf-8').strip()
         compile_time = time.time() - start_time
         current, peak = tracemalloc.get_traced_memory()
         compile_memory_usage = peak / (1024 * 1024) if peak > 0 else 0
-
+        
     finally:
         tracemalloc.stop()
         # Удаляем временный исходный файл
         if os.path.exists(source_file):
             os.remove(source_file)
             os.remove(executable_file) if executable_file and os.path.exists(executable_file) else None
-
-        # При ошибке компиляции удаляем и исполняемый файл, если он был создан
-        # if os.path.exists(executable_file):
-        #     os.remove(executable_file)
 
     if "MemoryError" in compile_error:
         compile_error = "MemoryError"
@@ -110,11 +105,11 @@ def compile_code(code, extension, additional_data = None):
         compile_error = "TimeoutError"
         compile_success = False
     
-    if additional_data['time_limit'] < compile_time:
+    if 'time_limit' in additional_data and additional_data['time_limit'] < compile_time:
         compile_error = "TimeLimitExceeded"
         compile_success = False
     
-    if additional_data['memory_limit'] < compile_memory_usage:
+    if 'memory_limit' in additional_data and additional_data['memory_limit'] < compile_memory_usage:
         compile_error = "MemoryLimitExceeded"
         compile_success = False
 
@@ -126,7 +121,7 @@ def compile_code(code, extension, additional_data = None):
         "memoryUsage": round(compile_memory_usage, 5),
     }
 
-def compare_results(expected_output, user_output, precision=None):
+def compare_results(expected_output, user_output, precision = None, validatorCode = None, input = None):
     """
     Compare expected code output with user's output.
 
@@ -139,11 +134,28 @@ def compare_results(expected_output, user_output, precision=None):
         bool: True if outputs match, else False.
     """
     try:
+
+        if validatorCode is not None:
+            expected_output = input + '\n' + expected_output if input else expected_output
+            user_output = input + '\n' + user_output if input else user_output
+            additional_data = {
+                "input": expected_output,
+            }
+
+            expected_result = compile_code(validatorCode, 'cpp', additional_data)
+            additional_data = {
+                "input": user_output,
+            }
+            user_result = compile_code(validatorCode, 'cpp', additional_data)
+                        
+            return expected_result['output'] == user_result['output']
+
         expected_tokens = expected_output.strip().split()
         user_tokens = user_output.strip().split()
-
+        
         if len(expected_tokens) != len(user_tokens):
             return False
+
 
         # Пробуем преобразовать в числа (если это возможно)
         try:
