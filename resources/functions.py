@@ -136,6 +136,9 @@ def compare_results(expected_output, user_output, precision = None, validatorCod
     try:
 
         if validatorCode is not None:
+            expected_output = expected_output.replace('\r\n', '\n').replace('\n', ' ')
+            user_output = user_output.replace('\r\n', '\n').replace('\n', ' ')
+            
             expected_output = input + '\n' + expected_output if input else expected_output
             user_output = input + '\n' + user_output if input else user_output
             additional_data = {
