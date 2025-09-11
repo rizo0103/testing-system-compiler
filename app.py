@@ -5,7 +5,7 @@ from executor.code_executor import execute_python_code
 app = Flask(__name__)
 CORS(app)
 
-@app.route("/run/python", methods=["POST"])
+@app.route("/run/py", methods=["POST"])
 def run_python():
     code = request.json.get("code", "")
     if not code:
