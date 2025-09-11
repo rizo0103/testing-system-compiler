@@ -1,6 +1,6 @@
-import subprocess
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from executor.code_executor import execute_python_code
 
 app = Flask(__name__)
 CORS(app)
@@ -11,24 +11,14 @@ def run_python():
     if not code:
         return jsonify({"error": "No code provided"}), 400
 
-    try:
-        # Run docker container and pass code via stdin
-        result = subprocess.run(
-            ["docker", "run", "-i", "--rm", "code-runner-python"],
-            input=code,
-            text=True,
-            capture_output=True,
-            timeout=10  # safety timeout in seconds
-        )
-        return jsonify({
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "exitCode": result.returncode
-        })
-    except subprocess.TimeoutExpired:
-        return jsonify({"error": "Time Limit Exceeded"}), 408
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    result = execute_python_code(code)
+    
+    if result.get("error") == "Time Limit Exceeded":
+        return jsonify(result), 408
+    elif "error" in result:
+        return jsonify(result), 500
+    
+    return jsonify(result)
 
 @app.route("/", methods=["GET"])
 def index():
