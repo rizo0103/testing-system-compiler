@@ -1,40 +1,68 @@
 import subprocess
 import json
 
-def execute_python_code(data):
+import subprocess
+import json
+
+def execute_python_code(payload_json):
+    """
+    payload_json: JSON string with keys:
+        - code: str (user's code)
+        - input: str (test case input)
+    Returns dict with:
+        - output: str
+        - error: str (if any)
+        - exit_code: int
+        - resources: {time, memory} (optional)
+    """
+    # ✅ payload_json is already a JSON string
+    payload = json.loads(payload_json)  # just to extract for logging/debug if needed
+
     try:
-        # Run docker container and pass code via stdin
+        # Pass the JSON string directly to the container
         result = subprocess.run(
             ["docker", "run", "-i", "--rm", "code-runner-python"],
-            input=data,
+            input=payload_json,  # <-- send full JSON string to stdin
             text=True,
             capture_output=True,
-            timeout=10  # safety timeout in seconds
+            timeout=10
         )
-        
+
         output_lines = result.stdout.strip().splitlines()
         program_stdout = ""
         resource_usage = None
 
         if output_lines:
             try:
-                # Last line is expected to be resource usage JSON
+                # If last line is JSON for resources
                 resource_usage = json.loads(output_lines[-1])
                 program_stdout = "\n".join(output_lines[:-1])
             except (json.JSONDecodeError, IndexError):
-                # If last line is not valid JSON, treat all output as stdout
-                program_stdout = result.stdout
+                # If last line is not JSON, treat all output as stdout
+                program_stdout = result.stdout.strip()
 
         return {
-            "stdout": program_stdout,
-            "stderr": result.stderr,
-            "exitCode": result.returncode,
-            "resources": resource_usage
+            "output": program_stdout,                 # stripped stdout
+            "error": result.stderr.strip() or None,  # any stderr
+            "exit_code": result.returncode,
+            "resources": resource_usage or {}
         }
+
     except subprocess.TimeoutExpired:
-        return {"error": "Time Limit Exceeded", "exitCode": -1}
+        return {
+            "output": "",
+            "error": "Time Limit Exceeded",
+            "exit_code": -1,
+            "resources": {}
+        }
     except Exception as e:
-        return {"error": str(e), "exitCode": -1}
+        return {
+            "output": "",
+            "error": f"Execution Error: {str(e)}",
+            "exit_code": -1,
+            "resources": {}
+        }
+
 
 def execute_cpp_code(data):
     try:
