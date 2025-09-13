@@ -1,11 +1,11 @@
 import subprocess
 
-def execute_python_code(code):
+def execute_python_code(data):
     try:
         # Run docker container and pass code via stdin
         result = subprocess.run(
             ["docker", "run", "-i", "--rm", "code-runner-python"],
-            input=code,
+            input=data,
             text=True,
             capture_output=True,
             timeout=10  # safety timeout in seconds

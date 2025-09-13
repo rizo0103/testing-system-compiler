@@ -7,11 +7,11 @@ CORS(app)
 
 @app.route("/run/py", methods=["POST"])
 def run_python():
-    code = request.json.get("code", "")
-    if not code:
+    data = request.json
+    if not data:
         return jsonify({"error": "No code provided"}), 400
 
-    result = execute_python_code(code)
+    result = execute_python_code(jsonify(data))
     
     if result.get("error") == "Time Limit Exceeded":
         return jsonify(result), 408
