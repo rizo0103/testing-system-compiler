@@ -2,6 +2,6 @@ FROM node:20-slim
 
 WORKDIR /app
 
-COPY runner.js.py /app/runner.py
+COPY runner.js /app/runner.js
 
-CMD ["python3", "runner.py"]
+CMD ["node", "runner.js"]
