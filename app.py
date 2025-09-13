@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from executor.code_executor import execute_python_code, execute_cpp_code, execute_js_code
-import json
+import json, os
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -127,4 +127,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run("0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
