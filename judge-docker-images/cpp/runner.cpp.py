@@ -1,49 +1,67 @@
-import sys, tempfile, subprocess, os
+import sys, tempfile, subprocess, os, json
 
 def main():
-    code = sys.stdin.read()
+    # Read C++ code from stdin
+    data = json.load(sys.stdin)
+    code = data.get("code", "")
+    user_input = data.get("input", "")
 
     # Save code to temporary .cpp file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".cpp") as tmp:
-        tmp.write(code.encode())
-        tmp.flush()
-        filename = tmp.name
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".cpp") as code_file:
+        code_file.write(code.encode())
+        code_file.flush()
+        code_filename = code_file.name
     
-    executable = filename + ".out"
+    # Save user input to a temp file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as input_file:
+        input_file.write(user_input.encode())
+        input_file.flush()
+        input_filename = input_file.name
+
     try:
-        # Compile the C++ code
+        # Compile
+        exe_file = tempfile.NamedTemporaryFile(delete=False).name
+        
         compile_result = subprocess.run(
-            ["g++", filename, "-o", executable],
+            ["g++", code_filename, "-o", exe_file],
             capture_output=True,
-            text=True,
-            timeout=5  # Compilation timeout
+            text=True
         )
 
         if compile_result.returncode != 0:
-            print(compile_result.stderr, end="")
+            # Compilation error
+            output = compile_result.stderr
+            usage = {}
+        else:
+            # Run with time & input
+            run_result = subprocess.run(
+                ["/usr/bin/time", "-f", "USED_TIME=%U;SYS_TIME=%S;ELAPSED=%E;MEM_KB=%M", exe_file],
+                stdin=open(input_filename, "r"),
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            output = run_result.stdout
+            resource_line = run_result.stderr.strip().splitlines()[-1]  # last line should have USED_TIME;SYS_TIME...
+            usage = {}
+
+            for part in resource_line.split(";"):
+                if "=" in part:
+                    key, val = part.split("=")
+                    usage[key] = val
             
-            return
-
-        # Run the compiled executable
-        run_result = subprocess.run(
-            [executable],
-            capture_output=True,
-            text=True,
-            timeout=5  # Execution timeout
-        )
-
-        print(run_result.stdout, end="")
-
-        if run_result.stderr:
-            print(run_result.stderr, end="")
+        # Return JSON
+        print(json.dumps({"output": output, "usage": usage}))
 
     except subprocess.TimeoutExpired:
-        print("Time Limit Exceeded")
+        print(json.dumps({"error": "Time Limit Exceeded", "output": "", "usage": {}}))
     
     finally:
-        os.remove(filename)
-        if os.path.exists(executable):
-            os.remove(executable)
+        os.remove(code_filename)
+        os.remove(input_filename)
+        if os.path.exists(exe_file):
+            os.remove(exe_file)
 
 if __name__ == "__main__":
     main()

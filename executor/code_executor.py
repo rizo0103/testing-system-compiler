@@ -36,20 +36,32 @@ def execute_python_code(data):
     except Exception as e:
         return {"error": str(e), "exitCode": -1}
 
-def execute_cpp_code(code):
+def execute_cpp_code(data):
     try:
         # Run docker container and pass code via stdin
         result = subprocess.run(
             ["docker", "run", "-i", "--rm", "code-runner-cpp"],
-            input=code,
+            input=data,
             text=True,
             capture_output=True,
             timeout=10  # safety timeout in seconds
         )
+
+        try:
+            # The runner script returns a JSON string
+            output_data = json.loads(result.stdout)
+            program_stdout = output_data.get("output", "")
+            resource_usage = output_data.get("usage", None)
+        except (json.JSONDecodeError, AttributeError):
+            # If output is not JSON, treat it as raw output
+            program_stdout = result.stdout
+            resource_usage = None
+
         return {
-            "stdout": result.stdout,
+            "stdout": program_stdout,
             "stderr": result.stderr,
-            "exitCode": result.returncode
+            "exitCode": result.returncode,
+            "resources": resource_usage
         }
     except subprocess.TimeoutExpired:
         return {"error": "Time Limit Exceeded", "exitCode": -1}
