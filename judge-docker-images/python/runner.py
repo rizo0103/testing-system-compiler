@@ -3,7 +3,6 @@ import sys, tempfile, subprocess, os, json
 def main():
     # Read JSON from stdin: {"code": "...", "input": "..."}
     data = json.load(sys.stdin)
-    print(data)
     code = data.get("code", "")
     user_input = data.get("input", "")
 

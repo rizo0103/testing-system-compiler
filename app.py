@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from executor.code_executor import execute_python_code, execute_cpp_code, execute_js_code
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -11,7 +12,7 @@ def run_python():
     if not data:
         return jsonify({"error": "No code provided"}), 400
 
-    result = execute_python_code(jsonify(data))
+    result = execute_python_code(json.dumps(data))
     
     if result.get("error") == "Time Limit Exceeded":
         return jsonify(result), 408
