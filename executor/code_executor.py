@@ -1,8 +1,8 @@
 import subprocess
 import json
+import requests
 
-import subprocess
-import json
+PYTHON_RUNNER_URL = "https://code-runner-python-358107326233.us-central1.run.app/run"
 
 def execute_python_code(payload_json):
     """
@@ -15,46 +15,35 @@ def execute_python_code(payload_json):
         - exit_code: int
         - resources: {time, memory} (optional)
     """
-    # ✅ payload_json is already a JSON string
-    payload = json.loads(payload_json)  # just to extract for logging/debug if needed
-
     try:
-        # Pass the JSON string directly to the container
-        result = subprocess.run(
-            ["docker", "run", "-i", "--rm", "code-runner-python"],
-            input=payload_json,  # <-- send full JSON string to stdin
-            text=True,
-            capture_output=True,
+        headers = {
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            PYTHON_RUNNER_URL,
+            headers=headers,
+            json=json.loads(payload_json),  # safer with requests
             timeout=10
         )
 
-        output_lines = result.stdout.strip().splitlines()
-        program_stdout = ""
-        resource_usage = None
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {
+                "output": "",
+                "error": f"Runner returned {response.status_code}: {response.text}",
+                "exit_code": -1,
+                "resources": {}
+            }
 
-        if output_lines:
-            try:
-                # If last line is JSON for resources
-                resource_usage = json.loads(output_lines[-1])
-                program_stdout = "\n".join(output_lines[:-1])
-            except (json.JSONDecodeError, IndexError):
-                # If last line is not JSON, treat all output as stdout
-                program_stdout = result.stdout.strip()
-
-        return {
-            "output": program_stdout,                 # stripped stdout
-            "error": result.stderr.strip() or None,  # any stderr
-            "exit_code": result.returncode,
-            "resources": resource_usage or {}
-        }
-
-    except subprocess.TimeoutExpired:
+    except requests.exceptions.Timeout:
         return {
             "output": "",
             "error": "Time Limit Exceeded",
             "exit_code": -1,
             "resources": {}
         }
+
     except Exception as e:
         return {
             "output": "",
@@ -62,7 +51,6 @@ def execute_python_code(payload_json):
             "exit_code": -1,
             "resources": {}
         }
-
 
 def execute_cpp_code(data):
     try:

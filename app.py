@@ -20,6 +20,7 @@ RUNTIME_MAP = {
 # -------------------------------
 @app.route("/run/<lang>", methods=["POST"])
 def run_code(lang):
+    print("test")
     data = request.json
     if not data:
         return jsonify({"error": "No code provided"}), 400
@@ -30,13 +31,13 @@ def run_code(lang):
     runner = RUNTIME_MAP[lang]
     result = runner(json.dumps(data))
 
+    # Check error correctly
     if result.get("error") == "Time Limit Exceeded":
         return jsonify(result), 408
-    elif "error" in result:
+    elif result.get("error"):  # Only trigger 500 if there is an actual error
         return jsonify(result), 500
 
-    return jsonify(result)
-
+    return jsonify(result), 200
 
 # -------------------------------
 # Task submission endpoint
