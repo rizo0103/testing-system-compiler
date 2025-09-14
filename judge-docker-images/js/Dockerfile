@@ -1,8 +1,15 @@
-FROM node:20-slim
+FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y time && rm -rf /var/lib/apt/lists/*
+# Install Node.js + GNU time
+RUN apt-get update && apt-get install -y curl time && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY runner.js /app/runner.js
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
 
-CMD ["node", "runner.js"]
+EXPOSE 8080
+CMD ["python3", "app.py"]
