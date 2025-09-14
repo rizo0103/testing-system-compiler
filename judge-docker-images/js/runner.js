@@ -3,69 +3,64 @@ const { spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
 
-function main() {
-    let inputData = '';
+let inputData = '';
 
-    process.stdin.on('data', chunk => inputData += chunk);
+process.stdin.on('data', chunk => {
+    inputData += chunk;
+});
 
-    process.stdin.on('end', () => {
-        try {
-            const data = JSON.parse(inputData);
-            const code = data.code || '';
-            const userInput = data.input || '';
+process.stdin.on('end', () => {
+    const response = {
+        output: "",
+        error: null,
+        exit_code: 0,
+        resources: {}
+    };
 
-            const codeFile = path.join(os.tmpdir(), `code_${Date.now()}.js`);
-            fs.writeFileSync(codeFile, code);
+    try {
+        const data = JSON.parse(inputData);
+        const code = data.code || '';
 
-            const child = spawn('/usr/bin/time', [
-                '-f', 'USED_TIME=%U;SYS_TIME=%S;ELAPSED=%E;MEM_KB=%M',
-                'node', codeFile
-            ], { stdio: ['pipe', 'pipe', 'pipe'] });
+        // Save code to temp file
+        const codeFilePath = path.join(os.tmpdir(), `code_${Date.now()}.js`);
+        fs.writeFileSync(codeFilePath, code);
 
-            // Pipe user input if exists
-            if (userInput) child.stdin.write(userInput);
-            child.stdin.end();
+        // Run code and measure resources
+        const child = spawn('/usr/bin/time', [
+            '-f', 'USED_TIME=%U;SYS_TIME=%S;ELAPSED=%E;MEM_KB=%M',
+            'node', codeFilePath
+        ], { stdio: ['ignore', 'pipe', 'pipe'] }); // ignore stdin
 
-            let stdout = '';
-            let stderr = '';
+        let stdout = '';
+        let stderr = '';
 
-            child.stdout.on('data', data => stdout += data.toString());
-            child.stderr.on('data', data => stderr += data.toString());
+        child.stdout.on('data', data => { stdout += data.toString(); });
+        child.stderr.on('data', data => { stderr += data.toString(); });
 
-            child.on('close', code => {
-                fs.unlinkSync(codeFile);
+        child.on('close', code => {
+            response.exit_code = code;
+            response.output = stdout.trim();
 
-                const lines = stderr.trim().split('\n');
-                const resourceLine = lines.pop();
-                const programStderr = lines.join('\n');
+            const stderrLines = stderr.trim().split('\n');
+            const resourceLine = stderrLines.pop(); // last line is resource info
+            if (resourceLine && resourceLine.includes('USED_TIME')) {
+                resourceLine.split(';').forEach(part => {
+                    const [key, val] = part.split('=');
+                    if (key && val) response.resources[key] = val;
+                });
+            }
 
-                const resources = {};
-                if (resourceLine && resourceLine.includes('USED_TIME')) {
-                    resourceLine.split(';').forEach(part => {
-                        const [key, val] = part.split('=');
-                        if (key && val) resources[key] = val;
-                    });
-                }
+            // If there were any errors printed before resources
+            if (stderrLines.length) {
+                response.error = stderrLines.join('\n');
+            }
 
-                const outputJson = {
-                    output: stdout.trim(),
-                    error: programStderr || null,
-                    exit_code: code,
-                    resources
-                };
+            fs.unlinkSync(codeFilePath);
+            console.log(JSON.stringify(response));
+        });
 
-                console.log(JSON.stringify(outputJson));
-            });
-
-        } catch (err) {
-            console.log(JSON.stringify({
-                output: '',
-                error: `Execution Error: ${err.message}`,
-                exit_code: -1,
-                resources: {}
-            }));
-        }
-    });
-}
-
-main();
+    } catch (e) {
+        response.error = e.message;
+        console.log(JSON.stringify(response));
+    }
+});

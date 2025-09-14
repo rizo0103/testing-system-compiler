@@ -3,6 +3,7 @@ import subprocess, json, requests
 
 PYTHON_RUNNER_URL = "https://code-runner-python-358107326233.us-central1.run.app/run"
 CPP_RUNNER_URL = "https://code-runner-cpp-358107326233.us-central1.run.app/run"
+JS_RUNNER_URL = "http://code-runner-js-358107326233.us-central1.run.app/run"
 
 def execute_python_code(payload_json):
     """
@@ -100,37 +101,48 @@ def execute_cpp_code(payload_json: str) -> dict:
             "resources": {}
         }
 
-def execute_js_code(data):
+def execute_js_code(payload_json):
+    """
+    payload_json: JSON string with keys:
+        - code: str
+        - input: str
+    Returns dict with:
+        - output: str
+        - error: str (if any)
+        - exit_code: int
+        - resources: {time, memory} (optional)
+    """
     try:
-        # Run docker container and pass code via stdin
-        result = subprocess.run(
-            ["docker", "run", "-i", "--rm", "code-runner-javascript"],
-            input=data,
-            text=True,
-            capture_output=True,
-            timeout=10  # safety timeout in seconds
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(
+            JS_RUNNER_URL,
+            headers=headers,
+            json=json.loads(payload_json),
+            timeout=10
         )
-        
-        output_lines = result.stdout.strip().splitlines()
-        program_stdout = ""
-        resource_usage = None
 
-        if output_lines:
-            try:
-                # Last line is expected to be resource usage JSON
-                resource_usage = json.loads(output_lines[-1])
-                program_stdout = "\n".join(output_lines[:-1])
-            except (json.JSONDecodeError, IndexError):
-                # If last line is not valid JSON, treat all output as stdout
-                program_stdout = result.stdout
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {
+                "output": "",
+                "error": f"Runner returned {response.status_code}: {response.text}",
+                "exit_code": -1,
+                "resources": {}
+            }
 
+    except requests.exceptions.Timeout:
         return {
-            "stdout": program_stdout,
-            "stderr": result.stderr,
-            "exitCode": result.returncode,
-            "resources": resource_usage
+            "output": "",
+            "error": "Time Limit Exceeded",
+            "exit_code": -1,
+            "resources": {}
         }
-    except subprocess.TimeoutExpired:
-        return {"error": "Time Limit Exceeded", "exitCode": -1}
+
     except Exception as e:
-        return {"error": str(e), "exitCode": -1}
+        return {
+            "output": "",
+            "error": f"Execution Error: {str(e)}",
+            "exit_code": -1,
+            "resources": {}
+        }

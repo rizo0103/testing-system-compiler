@@ -3,10 +3,10 @@ from flask_cors import CORS
 import json, subprocess
 
 app = Flask(__name__)
-CORS(app)  # allow all origins
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route("/run", methods=["POST"])
-def run_js_code():
+def run_code():
     data = request.json
     if not data or "code" not in data:
         return jsonify({"error": "No code provided"}), 400
