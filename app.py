@@ -4,8 +4,8 @@ from executor.code_executor import execute_python_code, execute_cpp_code, execut
 import json, os
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
-
+# CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 # -------------------------------
 # Language runner mapping
 # -------------------------------
@@ -18,9 +18,9 @@ RUNTIME_MAP = {
 # -------------------------------
 # Normal run endpoints
 # -------------------------------
+
 @app.route("/run/<lang>", methods=["POST"])
 def run_code(lang):
-    print("test")
     data = request.json
     if not data:
         return jsonify({"error": "No code provided"}), 400
@@ -128,4 +128,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
