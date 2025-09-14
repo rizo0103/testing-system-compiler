@@ -1,18 +1,15 @@
-# Use GCC base image
-FROM gcc:12
+FROM python:3.12-slim
 
-# Install Python + pip + Flask + GNU time
-RUN apt-get update && apt-get install -y python3 python3-pip time && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir -r requirements.txt
+# Install GCC + time
+RUN apt-get update && apt-get install -y g++ time && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy all files
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY . .
 
-# Expose Cloud Run default port
 EXPOSE 8080
 
-# Run Flask app
-CMD ["python3", "app.py"]
+CMD ["python", "app.py"]

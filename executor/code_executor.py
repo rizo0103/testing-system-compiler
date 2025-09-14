@@ -1,8 +1,8 @@
-import subprocess
-import json
-import requests
+import subprocess, json, requests
+# from config import PYTHON_RUNNER_URL, CPP_RUNNER_URL
 
 PYTHON_RUNNER_URL = "https://code-runner-python-358107326233.us-central1.run.app/run"
+CPP_RUNNER_URL = "https://code-runner-cpp-358107326233.us-central1.run.app/run"
 
 def execute_python_code(payload_json):
     """
@@ -52,37 +52,53 @@ def execute_python_code(payload_json):
             "resources": {}
         }
 
-def execute_cpp_code(data):
+def execute_cpp_code(payload_json: str) -> dict:
+    """
+    payload_json: JSON string with keys:
+        - code: str (C++ source code)
+        - input: str (stdin input for the program)
+    Returns dict with:
+        - output: str
+        - error: str (if any)
+        - exit_code: int
+        - resources: {USED_TIME, SYS_TIME, ELAPSED, MEM_KB}
+    """
     try:
-        # Run docker container and pass code via stdin
-        result = subprocess.run(
-            ["docker", "run", "-i", "--rm", "code-runner-cpp"],
-            input=data,
-            text=True,
-            capture_output=True,
-            timeout=10  # safety timeout in seconds
+        headers = {"Content-Type": "application/json"}
+
+        response = requests.post(
+            CPP_RUNNER_URL,
+            headers=headers,
+            json=json.loads(payload_json),
+            timeout=10
         )
 
-        try:
-            # The runner script returns a JSON string
-            output_data = json.loads(result.stdout)
-            program_stdout = output_data.get("output", "")
-            resource_usage = output_data.get("usage", None)
-        except (json.JSONDecodeError, AttributeError):
-            # If output is not JSON, treat it as raw output
-            program_stdout = result.stdout
-            resource_usage = None
+        if response.status_code == 200:
+            return response.json()
+        
+        else:
+            return {
+                "output": "",
+                "error": f"Runner returned {response.status_code}: {response.text}",
+                "exit_code": -1,
+                "resources": {}
+            }
 
+    except requests.exceptions.Timeout:
         return {
-            "stdout": program_stdout,
-            "stderr": result.stderr,
-            "exitCode": result.returncode,
-            "resources": resource_usage
+            "output": "",
+            "error": "Time Limit Exceeded",
+            "exit_code": -1,
+            "resources": {}
         }
-    except subprocess.TimeoutExpired:
-        return {"error": "Time Limit Exceeded", "exitCode": -1}
+
     except Exception as e:
-        return {"error": str(e), "exitCode": -1}
+        return {
+            "output": "",
+            "error": f"Execution Error: {str(e)}",
+            "exit_code": -1,
+            "resources": {}
+        }
 
 def execute_js_code(data):
     try:
