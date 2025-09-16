@@ -3,7 +3,7 @@ import subprocess, json, requests
 
 PYTHON_RUNNER_URL = "https://code-runner-python-358107326233.us-central1.run.app/run"
 CPP_RUNNER_URL = "https://code-runner-cpp-358107326233.us-central1.run.app/run"
-JS_RUNNER_URL = "http://code-runner-js-358107326233.us-central1.run.app/run"
+JS_RUNNER_URL = "https://code-runner-js-358107326233.us-central1.run.app/run"
 
 def execute_python_code(payload_json):
     """

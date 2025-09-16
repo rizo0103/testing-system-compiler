@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json, subprocess
+import json
+import subprocess
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -12,9 +13,9 @@ def run_code():
         return jsonify({"error": "No code provided"}), 400
 
     try:
-        # Run the JS runner script
+        # Call runner.js.py (Python wrapper that executes Node.js code safely)
         process = subprocess.run(
-            ["node", "runner.js"],
+            ["python3", "runner.js.py"],   # <-- changed here
             input=json.dumps(data),
             text=True,
             capture_output=True,
@@ -26,13 +27,23 @@ def run_code():
 
         return jsonify(json.loads(process.stdout.strip()))
     except subprocess.TimeoutExpired:
-        return jsonify({"output": "", "error": "Time Limit Exceeded", "exit_code": -1, "resources": {}}), 408
+        return jsonify({
+            "output": "",
+            "error": "Time Limit Exceeded",
+            "exit_code": -1,
+            "resources": {}
+        }), 408
     except Exception as e:
-        return jsonify({"output": "", "error": str(e), "exit_code": -1, "resources": {}}), 500
+        return jsonify({
+            "output": "",
+            "error": str(e),
+            "exit_code": -1,
+            "resources": {}
+        }), 500
 
 @app.route("/", methods=["GET"])
 def index():
-    return "JS Code Execution API is running."
+    return "JS Code Execution API with runner.js.py is running."
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
