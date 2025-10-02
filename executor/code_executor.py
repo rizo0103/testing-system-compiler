@@ -10,12 +10,16 @@ def execute_python_code(payload_json):
     payload_json: JSON string with keys:
         - code: str (user's code)
         - input: str (test case input)
+        - validator_code: str (code for multiple answers, optional)
     Returns dict with:
         - output: str
         - error: str (if any)
         - exit_code: int
         - resources: {time, memory} (optional)
     """
+
+    print("Payload json in code executor py ", payload_json)
+
     try:
         headers = {
             "Content-Type": "application/json",

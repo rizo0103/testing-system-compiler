@@ -8,6 +8,8 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route("/run", methods=["POST"])
 def run_code():
+    print("Python code is running...")
+
     data = request.get_json()
     if not data:
         return jsonify({"error": "No code provided"}), 400
@@ -32,4 +34,4 @@ def run_code():
         return jsonify({"output": "", "error": f"Execution Error: {str(e)}", "exit_code": -1, "resources": {}}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=8080, debug=True)
