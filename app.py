@@ -66,6 +66,7 @@ def task_submission():
     test_cases = data.get("test_cases", [])
     time_limit = float(data.get("time_limit", 2))      # default 2s
     memory_limit = float(data.get("memory_limit", 256)) # default 256MB
+    decimal_places = int(data.get("decimal_places", 2)) # default 2 decimal places
 
     if not code or not lang or not test_cases:
         return jsonify({"error": "Missing code, lang or test_cases"}), 400
@@ -121,6 +122,16 @@ def task_submission():
                     verdict = "Wrong Answer"
                 
                 if not is_correct:
+                    all_passed = False
+            elif 'decimal_places' in data:
+                try:
+                    if round(float(user_out), decimal_places) == round(float(expected_out), decimal_places):
+                        verdict = "Accepted"
+                    else:
+                        verdict = "Wrong Answer"
+                        all_passed = False
+                except ValueError:
+                    verdict = "Wrong Answer"
                     all_passed = False
             else:
                 verdict = "Wrong Answer"
