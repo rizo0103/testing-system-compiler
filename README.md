@@ -101,7 +101,7 @@ Submit code to be judged against a set of test cases.
 │   │   ├── Dockerfile
 │   │   ├── requirements.txt # Requirements for Flask app
 │   │   └── runner.cpp.py # Code runner for cpp
-│   └── js/
+│   ├── js/
 |   |   ├── app.py # Flask application for js code running
 │   │   ├── Dockerfile
 │   │   ├── requirements.txt # Requirements for Flask app
